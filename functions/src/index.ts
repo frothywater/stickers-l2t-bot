@@ -50,8 +50,8 @@ bot.on("document", async (ctx) => {
             } else stickersToBeUploaded.push(sticker)
         })
 
-        await downloadImages()
-        await processImages()
+        await downloadStickers()
+        await processStickers()
         await uploadStickers()
         await addImageIds(stickersToBeUploaded)
         await delay(1000)
@@ -80,30 +80,27 @@ bot.on("document", async (ctx) => {
             return result
         }
 
-        async function downloadImages(): Promise<void> {
-            await log("Downloading images...")
+        async function downloadStickers(): Promise<void> {
+            await log("Downloading stickers...")
             await concurrentDo(
                 stickersToBeUploaded.map((sticker) => () =>
-                    downloadFile(sticker.url).then((image) => {
+                    downloadSticker(sticker.url).then((image) => {
                         sticker.image = image
                     })
                 ),
                 5,
                 300,
-                60000
+                20000
             )
-            await log("All images downloaded.")
+            await log("All stickers downloaded.")
 
-            async function downloadFile(url: string): Promise<Buffer> {
-                function __downloadFile() {
-                    return axios.get(url).then((response) => response.data)
-                }
-
+            async function downloadSticker(url: string): Promise<Buffer> {
                 let error: any
                 let times = 0
                 while (times < 3) {
                     try {
-                        return await __downloadFile()
+                        const result = await __downloadSticker()
+                        return result
                     } catch (err) {
                         times++
                         error = err
@@ -111,29 +108,33 @@ bot.on("document", async (ctx) => {
                 }
                 if (error) console.log(error)
                 console.log(`Failed: ${url}.`)
-                throw new BotError("Downloading image failed.")
+                throw new BotError("Downloading stickers failed.")
+
+                function __downloadSticker(): Promise<any> {
+                    return axios.get(url).then((response) => response.data)
+                }
             }
         }
 
-        async function processImages(): Promise<void> {
-            await log("Processing images...")
+        async function processStickers(): Promise<void> {
+            await log("Processing stickers...")
             await Promise.all(
                 stickersToBeUploaded.map(async (sticker) => {
                     sticker.image = await normalizeImage(sticker.image!)
                 })
             )
-            await log("All images processed.")
+            await log("All stickers processed.")
         }
 
         async function uploadStickers(): Promise<void> {
-            await log("Uploading images...")
+            await log("Uploading stickers...")
             await concurrentDo(
                 stickersToBeUploaded.map((sticker) => () => uploadSticker(sticker)),
                 5,
                 1800,
                 60000
             )
-            await log("All images uploaded.")
+            await log("All stickers uploaded.")
 
             async function uploadSticker(sticker: LineSticker): Promise<void> {
                 let error: any
@@ -151,7 +152,7 @@ bot.on("document", async (ctx) => {
                     }
                 }
                 if (error) console.log(error)
-                throw new BotError("Uploading image failed.")
+                throw new BotError("Uploading stickers failed.")
 
                 function __uploadSticker() {
                     return ctx.telegram.uploadStickerFile(userId, {
@@ -183,14 +184,14 @@ bot.on("document", async (ctx) => {
         }
 
         async function addStickers(): Promise<void> {
-            await log("Adding images to the set...")
+            await log("Adding stickers to the set...")
             await concurrentDo(
                 stickerSet.stickers.slice(1).map((sticker) => () => addSticker(sticker)),
                 2,
                 1500,
                 80000
             )
-            await log("Images added to the set.")
+            await log("Stickers added to the set.")
 
             async function addSticker(sticker: LineSticker): Promise<void> {
                 let error: any
@@ -208,7 +209,7 @@ bot.on("document", async (ctx) => {
                     }
                 }
                 if (error) console.log(error)
-                throw new BotError("Adding image failed.")
+                throw new BotError("Adding stickers failed.")
 
                 function __addSticker() {
                     return ctx.telegram.addStickerToSet(
