@@ -270,3 +270,11 @@ export const background = functions
     .onPublish(async (message) => {
         await bot.handleUpdate(message.json)
     })
+
+export const test = functions.https.onRequest(async (req, res) => {
+    const url = req.query.url?.toString()
+    if (url) {
+        const response = await axios.get(url)
+        res.header(response.headers).status(response.status).send(response.data)
+    }
+})
