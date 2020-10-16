@@ -81,6 +81,10 @@ export function concurrentDo(
     timeout?: number
 ): Promise<void> {
     return new Promise((resolve, reject) => {
+        if (tasks.length === 0) {
+            return resolve()
+        }
+
         const queue: (Promise<void> | undefined)[] = []
         const taskToBeExcuted = [...tasks]
         const pLimit = limit ?? tasks.length
