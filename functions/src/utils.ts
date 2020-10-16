@@ -43,7 +43,7 @@ export function formattedName(str: string): string {
     let result = str.replace(/[^\w]/g, "_")
     if (!/^\w/.test(result)) result = "L2T_" + result
     result = `${result}_${uniqueId(6)}_by_stickers_l2t2_bot`
-    result = result.replace(/_{2,}/, "_")
+    result = result.split(/_{2,}/).join("")
 
     return result
 }
