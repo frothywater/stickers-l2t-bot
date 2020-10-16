@@ -1,0 +1,11 @@
+# Compiled JavaScript files
+**/*.js
+**/*.js.map
+
+lib/
+bash.txt
+
+# Node.js dependency directory
+node_modules/
+
+src/serviceAccountKey.json
