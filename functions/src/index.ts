@@ -81,7 +81,7 @@ bot.on("document", async (ctx) => {
         }
 
         async function downloadImages(): Promise<void> {
-            await log("Downaloding images...")
+            await log("Downloading images...")
             await concurrentDo(
                 stickersToBeUploaded.map((sticker) => () =>
                     downloadFile(sticker.url).then((image) => {
@@ -90,7 +90,7 @@ bot.on("document", async (ctx) => {
                 ),
                 5,
                 300,
-                20000
+                60000
             )
             await log("All images downloaded.")
 
@@ -99,14 +99,17 @@ bot.on("document", async (ctx) => {
                     return axios.get(url).then((response) => response.data)
                 }
 
+                let error: any
                 let times = 0
                 while (times < 3) {
                     try {
                         return await __downloadFile()
-                    } catch {
+                    } catch (err) {
                         times++
+                        error = err
                     }
                 }
+                if (error) console.log(error)
                 console.log(`Failed: ${url}.`)
                 throw new BotError("Downloading image failed.")
             }
@@ -227,8 +230,10 @@ bot.on("document", async (ctx) => {
         }
     } catch (err) {
         processingChat[userId] = false
-        if (err instanceof BotError) await ctx.reply(err.message)
-        else {
+        if (err instanceof BotError) {
+            console.log(err.message)
+            await ctx.reply(`${err.message}..😣 Please try again.`)
+        } else {
             console.log(err)
             await ctx.reply(`Something goes wrong...😣 Please try again.`)
         }
@@ -238,8 +243,8 @@ bot.on("document", async (ctx) => {
 const pubsub = new PubSub()
 const topicName = "main"
 const bkgRuntimeOptions: functions.RuntimeOptions = {
-    timeoutSeconds: 180,
-    memory: "256MB",
+    timeoutSeconds: 300,
+    memory: "1GB",
 }
 
 export const listen = functions.https.onRequest(async (req, res) => {

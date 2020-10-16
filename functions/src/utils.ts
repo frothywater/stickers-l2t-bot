@@ -83,6 +83,7 @@ export function concurrentDo(
     return new Promise((resolve, reject) => {
         const queue: (Promise<void> | undefined)[] = []
         const taskToBeExcuted = [...tasks]
+        const pLimit = limit ?? tasks.length
 
         fillQueue()
         const timer = setInterval(() => {
@@ -92,11 +93,11 @@ export function concurrentDo(
         if (timeout)
             timeoutTimer = setTimeout(() => {
                 clearTimeout(timeoutTimer)
-                reject()
+                reject(new BotError("...Timeout."))
             }, timeout)
 
         function isQueueEmpty(): boolean {
-            for (let i = 0; i < limit; i++) if (queue[i]) return false
+            for (let i = 0; i < pLimit; i++) if (queue[i]) return false
             return true
         }
 
@@ -106,7 +107,7 @@ export function concurrentDo(
         }
 
         function fillQueue() {
-            for (let i = 0; i < limit; i++) {
+            for (let i = 0; i < pLimit; i++) {
                 if (!queue[i]) {
                     if (taskToBeExcuted.length > 0) {
                         queue[i] = taskToBeExcuted.pop()!()
