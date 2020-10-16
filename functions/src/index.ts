@@ -8,8 +8,9 @@ import { FirestoreImageDoc, LineSticker, LineStickerSet } from "./typings"
 import { BotError, concurrentDo, delay, formattedName, isLineStickerSet, normalizeImage } from "./utils"
 
 const welcomeText =
-    "Hello! Send me a JSON file generated from https://stickers-l2t-editor.vercel.app.\
-    I can create the sticker set for you!"
+    "你好～ 这是一个可以把 Line 贴纸转换到 Telegram 来的 bot。\
+    我为你准备了[一个编辑器](https://stickers-l2t-editor.vercel.app)，你可以在那里编辑贴纸包。\
+    编辑器会为你生成一个 JSON 文件，然后拖到这里来，我就会开始工作。"
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount as any),
@@ -23,17 +24,17 @@ const bot = new Telegraf(token)
 const axios = Axios.create({ responseType: "arraybuffer" })
 const processingChat: Record<number, boolean> = {}
 
-bot.start((ctx) => ctx.reply(welcomeText))
+bot.start((ctx) => ctx.reply(welcomeText, { parse_mode: "Markdown" }))
 
 bot.on("document", async (ctx) => {
     const userId = ctx.from?.id!
 
     try {
         if (processingChat[userId]) {
-            throw new BotError("I'm already working hard!")
+            throw new BotError("我已经在吭哧吭哧地工作了，请等我把工作先做完！")
         } else {
             processingChat[userId] = true
-            await ctx.reply("OK, please wait a moment. The process usually takes one minute or longer.")
+            await ctx.reply("收到贴纸包文件～ 请耐心等待哦，整个过程至少需要一分钟。")
         }
 
         const stickerSet = await fetchStickerSetObject()
@@ -60,7 +61,7 @@ bot.on("document", async (ctx) => {
         await addStickers()
 
         processingChat[userId] = false
-        await log(`Succeeded!🥳 Here's your sticker set: [${stickerSet.name}](https://t.me/addstickers/${setName})`)
+        await log(`成功啦🥳！ 这就是你的贴纸包: [${stickerSet.name}](https://t.me/addstickers/${setName})`)
 
         async function fetchStickerSetObject(): Promise<LineStickerSet> {
             const link = await ctx.telegram.getFileLink(ctx.message?.document?.file_id!)
@@ -81,7 +82,7 @@ bot.on("document", async (ctx) => {
         }
 
         async function downloadStickers(): Promise<void> {
-            await log("Downloading stickers...")
+            await log("正在从 Line 下载贴纸...")
             await concurrentDo(
                 stickersToBeUploaded.map((sticker) => () =>
                     downloadSticker(sticker.url).then((image) => {
@@ -92,7 +93,7 @@ bot.on("document", async (ctx) => {
                 300,
                 20000
             )
-            await log("All stickers downloaded.")
+            await log("贴纸下载好了。")
 
             async function downloadSticker(url: string): Promise<Buffer> {
                 let error: any
@@ -108,7 +109,7 @@ bot.on("document", async (ctx) => {
                 }
                 if (error) console.log(error)
                 console.log(`Failed: ${url}.`)
-                throw new BotError("Downloading stickers failed.")
+                throw new BotError("下载贴纸时出错了")
 
                 function __downloadSticker(): Promise<any> {
                     return axios.get(url).then((response) => response.data)
@@ -117,24 +118,24 @@ bot.on("document", async (ctx) => {
         }
 
         async function processStickers(): Promise<void> {
-            await log("Processing stickers...")
+            await log("正在缩放贴纸图片...")
             await Promise.all(
                 stickersToBeUploaded.map(async (sticker) => {
                     sticker.image = await normalizeImage(sticker.image!)
                 })
             )
-            await log("All stickers processed.")
+            await log("贴纸图片都处理好了。")
         }
 
         async function uploadStickers(): Promise<void> {
-            await log("Uploading stickers...")
+            await log("正在上传贴纸到 Telegram 服务器...")
             await concurrentDo(
                 stickersToBeUploaded.map((sticker) => () => uploadSticker(sticker)),
                 5,
                 1800,
                 60000
             )
-            await log("All stickers uploaded.")
+            await log("贴纸都上传好了。")
 
             async function uploadSticker(sticker: LineSticker): Promise<void> {
                 let error: any
@@ -152,7 +153,7 @@ bot.on("document", async (ctx) => {
                     }
                 }
                 if (error) console.log(error)
-                throw new BotError("Uploading stickers failed.")
+                throw new BotError("上传贴纸时出错了")
 
                 function __uploadSticker() {
                     return ctx.telegram.uploadStickerFile(userId, {
@@ -180,18 +181,17 @@ bot.on("document", async (ctx) => {
                 png_sticker: firstSticker.fileId!,
                 emojis: firstSticker.emojis,
             } as any)
-            await log(`Sticker set created.`)
+            await log(`创建了一个新的贴纸包。`)
         }
 
         async function addStickers(): Promise<void> {
-            await log("Adding stickers to the set...")
+            await log("正在把贴纸们加进贴纸包里。")
             await concurrentDo(
                 stickerSet.stickers.slice(1).map((sticker) => () => addSticker(sticker)),
                 2,
                 1500,
                 80000
             )
-            await log("Stickers added to the set.")
 
             async function addSticker(sticker: LineSticker): Promise<void> {
                 let error: any
@@ -209,7 +209,7 @@ bot.on("document", async (ctx) => {
                     }
                 }
                 if (error) console.log(error)
-                throw new BotError("Adding stickers failed.")
+                throw new BotError("把贴纸们加进贴纸包时出错了")
 
                 function __addSticker() {
                     return ctx.telegram.addStickerToSet(
@@ -233,10 +233,10 @@ bot.on("document", async (ctx) => {
         processingChat[userId] = false
         if (err instanceof BotError) {
             console.log(err.message)
-            await ctx.reply(`${err.message}..😣 Please try again.`)
+            await ctx.reply(`糟糕，${err.message}😣！...再试一次吧～`)
         } else {
             console.log(err)
-            await ctx.reply(`Something goes wrong...😣 Please try again.`)
+            await ctx.reply(`奇怪的事情，发生了😣！...再试一次吧～`)
         }
     }
 })

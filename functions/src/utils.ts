@@ -97,7 +97,7 @@ export function concurrentDo(
         if (timeout)
             timeoutTimer = setTimeout(() => {
                 clearTimeout(timeoutTimer)
-                reject(new BotError("...Timeout."))
+                reject(new BotError("操作超时了"))
             }, timeout)
 
         function isQueueEmpty(): boolean {
