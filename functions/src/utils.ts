@@ -40,12 +40,16 @@ export function formattedName(str: string): string {
         return resultStr
     }
 
-    let result = str.replace(/[^\w]/g, "_")
-    if (!/^\w/.test(result)) result = "L2T_" + result
-    result = `${result}_${uniqueId(6)}_by_stickers_l2t2_bot`
-    result = result.split(/_{2,}/).join("")
-
-    return result
+    // Only alphanumeric and underscore.
+    let part1 = str.replace(/[^\w]/g, "_")
+    // Must start with letter.
+    if (!/^\w/.test(part1)) part1 = "L" + part1
+    // Must end with the bot's name.
+    const part2 = `_${uniqueId(6)}_by_stickers_l2t2_bot`
+    // The length must be no more then 64 chars.
+    part1 = part1.slice(0, 64 - part2.length)
+    // No consecutive underscores.
+    return (part1 + part2).split(/_{2,}/).join("")
 }
 
 export function normalizeImage(input: Buffer): Promise<Buffer> {
